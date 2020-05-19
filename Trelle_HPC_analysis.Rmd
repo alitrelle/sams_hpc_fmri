@@ -1,0 +1,2352 @@
+---
+title: "Analysis Code for Trelle et al. (2020) eLife: Hippocampal and cortical mechanisms at retrieval explain variability in episodic remembering in older adults"
+output: html_notebook
+---
+
+
+```{r}
+library(magrittr)
+library(lme4)
+library(lmerTest)
+library(dplyr)
+library(GGally)
+library(psych)
+library(multcomp)
+library(lavaan)
+```
+
+```{r}
+#load data
+am_plots = read.csv('./source_data/data_individual_differences.csv')
+am_data <- am_plots
+am_data[ ,c(3,5:41)] <- scale(am_data[ ,c(3,5:41)])
+```
+
+## behav
+
+```{r}
+M=lm(oldnew_dprime~age+gender+yrs_educ,data=am_data)
+summary(M)
+
+M=lm(associative_dprime~age+gender+yrs_educ,data=am_data)
+summary(M)
+
+M=lm(exemplar_specific_recall~age+gender+yrs_educ,data=am_data)
+summary(M)
+
+M=lm(delayed_recall_comp~age+gender+yrs_educ,data=am_data)
+summary(M)
+```
+
+
+```{r}
+#residualise by age 
+M=lm(associative_dprime~age,am_data)
+am_data$am_age_res <- resid(M)
+
+M=lm(delayed_recall_comp~age,am_data)
+am_data$npdr_age_res <- resid(M)
+am_plots$npdr_age_res <- resid(M)
+
+M=lm(delayed_recall_comp~age+gender,am_data)
+am_data$npdr_agesex_res <- resid(M)
+am_plots$npdr_agesex_res <- resid(M)
+```
+
+
+## funct ~ resids
+```{r}
+#residualise by motion 
+M=lm(Logit_VTC_x~mean_motion_x,am_data)
+summary(M)
+am_data$vtcenc_motion_res <- resid(M)
+
+M=lm(Logit_ANG_x~mean_motion_x,am_data)
+summary(M)
+am_data$angenc_motion_res <- resid(M)
+```
+
+```{r}
+#residualise by motion 
+
+M=lm(Logit_VTC_y~vtcenc_motion_res+mean_motion_y,am_data)
+summary(M)
+am_data$vtcretr_mot_enc_res <- resid(M)
+am_plots$vtcretr_mot_enc_res <- resid(M)
+
+M=lm(Logit_ANG_y~angenc_motion_res+mean_motion_y,am_data)
+summary(M)
+am_data$angretr_mot_enc_res <- resid(M)
+am_plots$angretr_mot_enc_res <- resid(M)
+```
+
+```{r}
+#residualise by motion 
+M=lm(AH.CR_HC~mean_motion_y,am_data)
+summary(M)
+am_data$HC_mot_res <- resid(M)
+am_plots$HC_mot_res <- resid(M)
+```
+
+```{r}
+#residualise by motion 
+M=lm(WE.WC_ANG~mean_motion,am_data)
+am_data$angersev_mot_res <- resid(M)
+
+M=lm(WE.WC_VTC~mean_motion,am_data)
+am_data$vtcersev_mot_res <- resid(M)
+
+M=lm(WC.BC_ANG~mean_motion,am_data)
+am_data$angerscat_mot_res <- resid(M)
+
+M=lm(WC.BC_VTC~mean_motion,am_data)
+am_data$vtcerscat_mot_res <- resid(M)
+```
+
+
+```{r}
+#residualise by age
+M=lm(Logit_VTC_x~age,am_data)
+summary(M)
+
+M=lm(Logit_ANG_x~age,am_data)
+summary(M)
+
+M=lm(vtcenc_motion_res~age,am_data)
+summary(M)
+
+M=lm(angenc_motion_res~age,am_data)
+summary(M)
+```
+
+
+```{r}
+# one subject missing post-test data
+sp_data <- am_data[complete.cases(am_data[ , 7]),]
+sp_plots <- am_plots[complete.cases(am_plots[ , 7]),]
+
+M=lm(exemplar_specific_recall~age,sp_data)
+sp_data$amsp_age_res <- resid(M)
+
+M=lm(exemplar_specific_recall~age+delayed_recall_comp,sp_data)
+sp_data$amsp_age_np_res <- resid(M)
+```
+
+## func ~ age
+```{r}
+#effects of age, sex, ed on functional metrics
+M=lm(vtcretr_mot_enc_res~age+gender+yrs_educ,am_data)
+summary(M)
+confint(M)
+
+M=lm(angretr_mot_enc_res~age+gender+yrs_educ,am_data)
+summary(M)
+confint(M)
+
+M=lm(HC_mot_res~age+gender+yrs_educ,am_data)
+summary(M)
+confint(M)
+
+M=lm(vtcersev_mot_res~age+gender+yrs_educ,am_data)
+summary(M)
+confint(M)
+
+M=lm(angersev_mot_res~age+gender+yrs_educ,am_data)
+summary(M)
+confint(M)
+```
+
+
+
+## simple reg
+```{r}
+# memory ~ functional metrics
+M=lm(am_age_res~HC_mot_res,am_data)
+summary(M)
+
+M=lm(am_age_res~vtcretr_mot_enc_res,am_data)
+summary(M)
+
+M=lm(am_age_res~angretr_mot_enc_res,am_data)
+summary(M)
+
+M=lm(am_age_res~vtcersev_mot_res,am_data)
+summary(M)
+
+M=lm(am_age_res~angersev_mot_res,am_data)
+summary(M)
+```
+
+```{r}
+# memory ~ functional metrics
+M=lm(amsp_age_res~HC_mot_res,sp_data)
+summary(M)
+
+M=lm(amsp_age_res~vtcretr_mot_enc_res,sp_data)
+summary(M)
+
+M=lm(amsp_age_res~angretr_mot_enc_res,sp_data)
+summary(M)
+
+M=lm(amsp_age_res~vtcersev_mot_res,sp_data)
+summary(M)
+
+M=lm(amsp_age_res~angersev_mot_res,sp_data)
+summary(M)
+
+```
+
+```{r}
+# memory ~ functional metrics
+M=lm(npdr_agesex_res~HC_mot_res,am_data)
+summary(M)
+
+M=lm(npdr_agesex_res~vtcretr_mot_enc_res,am_data)
+summary(M)
+
+M=lm(npdr_agesex_res~angretr_mot_enc_res,am_data)
+summary(M)
+```
+
+
+```{r}
+# memory ~ age*functional metrics
+M=lm(associative_dprime~age*HC_mot_res,am_data)
+summary(M)
+
+M=lm(associative_dprime~age*vtcretr_mot_enc_res,am_data)
+summary(M)
+
+M=lm(associative_dprime~age*angretr_mot_enc_res,am_data)
+summary(M)
+
+M=lm(associative_dprime~age*vtcersev_mot_res,am_data)
+summary(M)
+
+M=lm(associative_dprime~age*angersev_mot_res,am_data)
+summary(M)
+```
+
+
+```{r}
+# memory ~ age*functional metrics
+
+M=lm(exemplar_specific_recall~age*HC_mot_res,sp_data)
+summary(M)
+
+M=lm(exemplar_specific_recall~age*vtcretr_mot_enc_res,sp_data)
+summary(M)
+
+M=lm(exemplar_specific_recall~age*angretr_mot_enc_res,sp_data)
+summary(M)
+
+M=lm(exemplar_specific_recall~age*vtcersev_mot_res,sp_data)
+summary(M)
+
+M=lm(exemplar_specific_recall~age*angersev_mot_res,sp_data)
+summary(M)
+```
+
+## multiple reg
+
+```{r}
+# memory ~ relative contribution of functional metrics
+M = lm(associative_dprime~age,am_data)
+summary(M)
+
+M1=lm(associative_dprime~age + HC_mot_res,am_data)
+summary(M1)
+
+M2=lm(associative_dprime~age + HC_mot_res+vtcretr_mot_enc_res,am_data)
+summary(M2)
+
+M3=lm(associative_dprime~age + HC_mot_res+angretr_mot_enc_res,am_data)
+summary(M3)
+
+M4=lm(associative_dprime~age + HC_mot_res+vtcretr_mot_enc_res+angretr_mot_enc_res,am_data)
+summary(M4)
+
+M5=lm(associative_dprime~age + HC_mot_res+vtcretr_mot_enc_res+delayed_recall_comp,am_data)
+summary(M5)
+
+anova (M, M1)
+
+anova(M1,M2,M4)
+
+anova(M1,M3,M4)
+```
+
+
+
+
+```{r}
+# memory ~ relative contribution of functional metrics
+
+M=lm(exemplar_specific_recall~age,sp_data)
+summary(M)
+
+M1=lm(exemplar_specific_recall~age+HC_mot_res,sp_data)
+summary(M1)
+
+M2=lm(exemplar_specific_recall~age+HC_mot_res+vtcretr_mot_enc_res,sp_data)
+summary(M2)
+
+M3=lm(exemplar_specific_recall~age+HC_mot_res+angretr_mot_enc_res,sp_data)
+summary(M3)
+
+M4=lm(exemplar_specific_recall~age+HC_mot_res+vtcretr_mot_enc_res+angretr_mot_enc_res,sp_data)
+summary(M4)
+
+M5=lm(exemplar_specific_recall~age+HC_mot_res+vtcretr_mot_enc_res+delayed_recall_comp,sp_data)
+summary(M5)
+
+anova(M,M1)
+
+anova(M1,M2,M4)
+
+anova(M1,M3,M4)
+
+anova(M2,M5)
+```
+
+```{r}
+M1=lm(exemplar_specific_recall~age+delayed_recall_comp,sp_data)
+summary(M1)
+
+M2=lm(exemplar_specific_recall~age+delayed_recall_comp+HC_mot_res+vtcretr_mot_enc_res,sp_data)
+summary(M2)
+
+anova(M1,M2)
+```
+
+```{r}
+M=lm(delayed_recall_comp~age+gender+HC_mot_res+vtcretr_mot_enc_res,am_data)
+summary(M)
+```
+
+```{r}
+M=lm(amsp_age_np_res~HC_mot_res,sp_data)
+summary(M)
+
+M1=lm(amsp_age_np_res~HC_mot_res+vtcretr_mot_enc_res,sp_data)
+summary(M1)
+
+anova(M,M1)
+```
+
+## subfield individual difference
+```{r}
+#remove motion effect retrieval
+M=lm(AH.CR_DG.CA3~mean_motion_y,am_data)
+am_data$DG.CA3_mot_res <- resid(M)
+
+M=lm(AH.CR_CA1~mean_motion_y,am_data)
+am_data$CA1_mot_res <- resid(M)
+
+M=lm(AH.CR_Sub~mean_motion_y,am_data)
+am_data$Sub_mot_res <- resid(M)
+
+M=lm(AH.CR_HC.Head~mean_motion_y,am_data)
+am_data$hchead_mot_res <- resid(M)
+
+M=lm(AH.CR_HC.Tail~mean_motion_y,am_data)
+am_data$hctail_mot_res <- resid(M)
+
+```
+
+```{r}
+M=lm(am_age_res~hctail_mot_res,am_data)
+summary(M)
+```
+
+```{r}
+M=lm(am_age_res~DG.CA3_mot_res+CA1_mot_res+Sub_mot_res,am_data)
+summary(M)
+```
+
+```{r}
+M=lm(amsp_age_res~hctail_mot_res,sp_data)
+summary(M)
+```
+```{r}
+M=lm(amsp_age_res~DG.CA3_mot_res+CA1_mot_res+Sub_mot_res,sp_data)
+summary(M)
+```
+
+## main plots
+
+```{r}
+theme_set(
+    theme_classic(base_size = 15)
+)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=associative_dprime)) +
+geom_point() +
+labs(x="Age", y = "Associative d'")+
+scale_size_manual(values=c(27))+
+theme_classic()
+m + geom_smooth(method=lm,color='black')
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=exemplar_specific_recall)) +
+geom_point() +
+labs(x="Age", y = "Proportion Exemplars Recalled")+
+scale_size_manual(values=c(27))+
+theme_classic()
+m + geom_smooth(method=lm,color='black')
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=associative_dprime, y=exemplar_specific_recall)) +
+geom_point() +
+labs(x="Associative d'", y = "Proportion Exemplars Recalled")+
+scale_size_manual(values=c(27))+
+theme_classic()
+m + geom_smooth(method=lm,color='black')
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=AH.CR_HC)) + geom_point() +
+labs(x = "Age", y ="Hippocampal Activity (a.u.)")
+#xlab("Age") + ylab("Hippocampal Activity (a.u.)\n")
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/age_hipp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=Logit_VTC_y)) + geom_point() +
+#labs(x = "Age", y ="VTC Category Reinstatement")
+xlab("Age") + ylab("VTC Category-Level Reinstatement\n")
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/age_vtc.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=Logit_ANG_y)) + geom_point() +
+#labs(x = "Age", y ="ANG Category Reinstatement")
+xlab("Age") + ylab("ANG Category-Level Reinstatement\n")
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/age_ang.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=AH.CR_HC, y=exemplar_specific_recall)) + geom_point() +
+labs(x="Hippocampal Activity (a.u.)", y = "Proportion Exemplars Recalled")+ ylim(-.15,1)
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/amsp_hipp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_VTC_y, y=exemplar_specific_recall)) + geom_point() +
+labs(x="VTC Category-Level Reinstatement", y = "Proportion Exemplars Recalled") + ylim(-.15,1)
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/amsp_vtc.png", width = 4.8, height = 3.8)
+```
+
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_ANG_y, y=exemplar_specific_recall)) + geom_point() +
+labs(x="ANG Category-Level Reinstatement", y = "Proportion Exemplars Recalled") + ylim(-.15,1)
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/amsp_ang.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=AH.CR_HC, y=delayed_recall_comp)) + geom_point() +
+#labs(x="Hippocampal Activity (a.u.)", y = "Delayed Recall Composite (z)")+
+xlab("Hippocampal Activity (a.u.)") + ylab("Delayed Recall Composite (z)\n")
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/npdr_hipp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_VTC_y, y=delayed_recall_comp)) + geom_point() +
+#labs(x="VTC Category Reinstatement", y = "Delayed Recall Composite (z)")
+xlab("VTC Category-Level Reinstatement") + ylab("Delayed Recall Composite (z)\n")
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/npdr_vtc.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_ANG_y, y=delayed_recall_comp)) + geom_point() +
+#labs(x="ANG Reinstatement Strength", y = "Delayed Recall Composite (z)")+
+xlab("ANG Category-Level Reinstatement") + ylab("Delayed Recall Composite (z)\n")
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/npdr_ang.png", width = 4.8, height = 3.8)
+```
+
+
+
+## supp plots
+
+```{r}
+m<-ggplot(am_plots, aes(x=AH.CR_HC, y=Logit_VTC_y)) + geom_point() +
+xlab("Hippocampal Activity (a.u.)") + ylab("VTC Category-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/hipp_vtc.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=AH.CR_HC, y=Logit_ANG_y)) + geom_point() +
+xlab("Hippocampal Activity (a.u.)") + ylab("ANG Category-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/hipp_ang.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_VTC_y, y=Logit_ANG_y)) + geom_point() +
+xlab("VTC Category-Level Reinstatement") + ylab("ANG Category-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/vtc_ang.png", width = 4.8, height = 3.8)
+```
+
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_VTC_x, y=Logit_VTC_y)) + geom_point() +
+xlab("VTC Classifier Encoding Strength")+ ylab("VTC Category-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/vtc_encretr.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=Logit_ANG_x, y=Logit_ANG_y)) + geom_point() +
+xlab("ANG Classifier Encoding Strength")+ ylab("ANG Category-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/ang_encretr.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=WE.WC_VTC)) + geom_point() +
+xlab("Age")+ ylab("VTC Event-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/vtc_ageers.png", width = 4.8, height = 3.8)
+```
+```{r}
+m<-ggplot(am_plots, aes(x=age, y=WE.WC_ANG)) + geom_point() +
+xlab("Age")+ ylab("ANG Event-Level Reinstatement") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/ang_ageers.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_plots, aes(x=AH.CR_HC, y=associative_dprime)) + geom_point() +
+xlab("Hippocampal Activity (a.u.)")+ ylab("Associative d' ") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/hipp_assocd.png", width = 4.8, height = 3.8)
+
+m<-ggplot(am_plots, aes(x=Logit_VTC_y, y=associative_dprime)) + geom_point() +
+xlab("VTC Category-Level Reinstatement")+ ylab("Associative d' ") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/vtc_assocd.png", width = 4.8, height = 3.8)
+
+m<-ggplot(am_plots, aes(x=Logit_ANG_y, y=associative_dprime)) + geom_point() +
+xlab("ANG Category-Level Reinstatement")+ ylab("Associative d' ") 
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/ang_assocd.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+theme_set(
+    theme_classic(base_size = 15)
+)
+```
+
+```{r}
+x<-ggplot(sp_plots, aes(x=age, y=HC_mot_res)) + geom_point() +
+labs(x = "Age", y=expression("Hippocampal Activity"[adj]))
+x + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/age_hipp_res_supp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+y<-ggplot(sp_plots, aes(x=age, y=vtcretr_mot_enc_res)) + geom_point() +
+labs(x = "Age", y=expression("VTC Category-Level Reinstatement"[adj] ))
+y + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/age_vtc_res_supp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+z<-ggplot(sp_plots, aes(x=age, y=vtcretr_mot_enc_res)) + geom_point() +
+labs(x = "Age", y=expression("ANG Category-Level Reinstatement"[adj] ))
+z + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/age_ang_res_supp.png", width = 4.8, height = 3.8)
+```
+
+
+```{r}
+m<-ggplot(sp_data, aes(x=HC_mot_res, y=amsp_age_res)) + geom_point() +
+labs(x=expression("Hippocampal Activity"[adj]), y = expression("Proportion Exemplars Recalled"[adj]))
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/amsp_hc_res_supp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(sp_data, aes(x=vtcretr_mot_enc_res, y=amsp_age_res)) + geom_point() +
+labs(x=expression("VTC Category-Level Reinstatement"[adj]), y = expression("Proportion Exemplars Recalled"[adj]))
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/amsp_vtc_res_supp.png", width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(sp_data, aes(x=angretr_mot_enc_res, y=amsp_age_res)) + geom_point() +
+labs(x=expression("ANG Category-Level Reinstatement"[adj]), y = expression("Proportion Exemplars Recalled"[adj]))
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/amsp_ang_res_supp.png", width = 4.8, height = 3.8)
+```
+
+
+```{r}
+m<-ggplot(am_data, aes(x=HC_mot_res, y=npdr_age_res)) + geom_point() +
+labs(x=expression("Hippocampal Activity"[adj]), y = expression("Delayed Recall Composite"[adj]))
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/np_hc_res_supp.png", width = 4.8, height = 3.8)
+```
+
+
+```{r}
+m<-ggplot(am_data, aes(x=vtcretr_mot_enc_res, y=npdr_age_res)) + geom_point() +
+labs(x=expression("VTC Category-Level Reinstatement"[adj]), y = expression("Delayed Recall Composite"[adj]))
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/np_vtc_res_supp.png",  width = 4.8, height = 3.8)
+```
+
+```{r}
+m<-ggplot(am_data, aes(x=angretr_mot_enc_res, y=npdr_age_res)) + geom_point() +
+labs(x=expression("ANG Category-Level Reinstatement"[adj]), y = expression("Delayed Recall Composite"[adj]))
+m + geom_smooth(method=lm,color='black')
+ggsave("~/Desktop/np_ang_res_supp.png",  width = 4.8, height = 3.8)
+```
+
+
+## mixed effects models
+
+```{r}
+# load data
+mvpa = read.csv('./source_data/data_trialwise_mvpa.csv') 
+
+mvpa = mvpa %>% 
+  group_by(Subject) %>%
+   mutate_if(is.double, scale)
+
+mvpa_ah = mvpa %>% filter(Assoc_Hit == 1)
+mvpa_ah = mvpa_ah %>% 
+  group_by(Subject) %>%
+   mutate_if(is.double, scale)
+
+mvpa$age_z <- scale(mvpa$age)
+mvpa_ah$age_z <- scale(mvpa_ah$age)
+```
+
+```{r}
+# load data
+rsa = read.csv('./source_data/data_trialwise_rsa.csv') 
+
+rsa = rsa %>% 
+  group_by(Subject) %>%
+   mutate_if(is.double, scale)
+
+rsa_ah = rsa %>% filter(Assoc_Hit == 1)
+rsa_ah = rsa_ah %>% 
+  group_by(Subject) %>%
+   mutate_if(is.double, scale)
+
+rsa$age_z <- scale(rsa$age)
+rsa_ah$age_z <- scale(rsa_ah$age)
+```
+
+
+```{r}
+# assoc hit predict ex sp hit
+full_model = glmer(Ex_Sp_Hit ~ Category + Assoc_Hit + (1|Subject)+ (0+Assoc_Hit|Subject), data=mvpa, family = binomial)
+
+partial_model  = glmer(Ex_Sp_Hit ~ Category + (1|Subject) + (0+Assoc_Hit|Subject), data=mvpa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# Assoc Hit ~ Reinstatement, controlling for encoding classifier strength and uni 
+full_model = glmer(Assoc_Hit ~ Category + Sel_Uni_VTC + Logit_VTC_x + Logit_VTC_y + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa, family = binomial)
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+
+partial_model = glmer(Assoc_Hit ~ Category + Sel_Uni_VTC + Logit_VTC_x + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa, family = binomial)
+
+ll_partial = logLik(partial_model)[1]*-2
+
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# Assoc Hit ~ Reinstatement, controlling for encoding classifier strength and uni 
+full_model = glmer(Assoc_Hit ~ Category + Sel_Uni_ANG + Logit_ANG_x + Logit_ANG_y + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+
+partial_model = glmer(Assoc_Hit ~ Category + Sel_Uni_ANG + Logit_ANG_x + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# Ex Sp Hit ~ Reinstatement, controlling for encoding classifier strength and uni 
+full_model = glmer(Ex_Sp_Hit ~ Category + Sel_Uni_VTC + Logit_VTC_x + Logit_VTC_y + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa, family = binomial)
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+
+partial_model = glmer(Ex_Sp_Hit ~ Category + Sel_Uni_VTC + Logit_VTC_x + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa, family = binomial)
+#summary(partial_model)
+
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# Ex Sp Hit ~ Reinstatement, controlling for encoding classifier strength and uni 
+full_model = glmer(Ex_Sp_Hit ~ Category + Sel_Uni_ANG + Logit_ANG_x + Logit_ANG_y + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+
+partial_model = glmer(Ex_Sp_Hit ~ Category + Sel_Uni_ANG + Logit_ANG_x + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+#summary(partial_model)
+
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# RT ~ reinstatement  (correct trials) - VTC
+full_model = lmer(RT ~ Category + Sel_Uni_VTC + Logit_VTC_x + Logit_VTC_y + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa_ah,REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Category + Sel_Uni_VTC + Logit_VTC_x + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa_ah,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+# RT ~ reinstatement  (correct trials) - ANG
+full_model = lmer(RT ~ Category + Sel_Uni_ANG + Logit_ANG_x + Logit_ANG_y + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa_ah,REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Category + Sel_Uni_ANG + Logit_ANG_x + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa_ah,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+
+```{r}
+# Assoc Hit ~ event level - vtc
+full_model = glmer(Assoc_Hit ~ Category + VTC + WC_VTC + WE_VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa, family = binomial)
+summary(full_model)
+
+partial_model =glmer(Assoc_Hit ~ Category + VTC + WC_VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa, family = binomial)
+#summary(partial_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# Assoc Hit ~ event level - ang
+full_model = glmer(Assoc_Hit ~ Category + ANG + WC_ANG + WE_ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa, family = binomial)
+summary(full_model)
+
+partial_model =glmer(Assoc_Hit ~ Category + ANG + WC_ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa, family = binomial)
+#summary(partial_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# Ex Sp Hit ~ event level - vtc
+full_model = glmer(Ex_Sp_Hit ~ Category + VTC + WC_VTC + WE_VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa, family = binomial)
+summary(full_model)
+
+partial_model =glmer(Ex_Sp_Hit ~ Category + VTC + WC_VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa, family = binomial)
+#summary(partial_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# Ex Sp Hit ~ event level - ang
+full_model = glmer(Ex_Sp_Hit ~ Category + ANG + WC_ANG + WE_ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa, family = binomial)
+summary(full_model)
+
+partial_model =glmer(Ex_Sp_Hit ~ Category + ANG + WC_ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa, family = binomial)
+#summary(partial_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# RT ~  event reinstatement  (correct trials) - VTC
+full_model = lmer(RT ~ Category + VTC + WC_VTC + WE_VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa[(rsa$Assoc_Hit == 1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Category + VTC + WC_VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa[(rsa$Assoc_Hit == 1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# RT ~ event reinstatement  (correct trials) - ANG
+full_model = lmer(RT ~ Category + ANG + WC_ANG + WE_ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa[(rsa$Assoc_Hit == 1), ],REML=F)
+summary(full_model)
+
+partial_model =  lmer(RT ~ Category + ANG + WC_ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa[(rsa$Assoc_Hit == 1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# Assoc_Hit ~ hippocampal activity
+
+full_model = glmer(Assoc_Hit ~ Category + HC + (1|Subject) + (0 + HC |Subject), data=mvpa, family = binomial) 
+summary(full_model)
+partial_model = glmer(Assoc_Hit ~ Category + (1|Subject) + (0 + HC |Subject), data=mvpa, family = binomial) 
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# Ex_Sp_Hit ~ hippocampal activity
+full_model = glmer(Ex_Sp_Hit ~ Category + HC + (1|Subject) + (0 + HC |Subject) , data=mvpa, family = binomial)
+summary(full_model)
+partial_model = glmer(Ex_Sp_Hit ~ Category + (1|Subject) + (0 + HC |Subject) , data=mvpa, family = binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# RT ~ hipp  (correct trials)
+full_model = lmer(RT ~ Assoc_Hit + Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Assoc_Hit + Category + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# vtc reinstatement ~ hipp 
+full_model = lmer(Logit_VTC_y ~ Category + HC + Logit_VTC_x + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang reinstatement ~ hipp  
+full_model = lmer(Logit_ANG_y ~ Category + HC + Logit_ANG_x + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# vtc reinstatement ~ hipp (correct only)
+full_model = lmer(Logit_VTC_y ~ Category + HC + Logit_VTC_x + (1|Subject) + (0 + HC|Subject), data=mvpa_ah,REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + (1|Subject) + (0 + HC|Subject), data=mvpa_ah,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang reinstatement ~ hipp  (correct only)
+full_model = lmer(Logit_ANG_y ~ Category + HC + Logit_ANG_x + (1|Subject) + (0 + HC|Subject), data=mvpa_ah,REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + (1|Subject) + (0 + HC|Subject), data=mvpa_ah,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+
+```{r}
+# vtc event level ~ hipp - all trials
+full_model = lmer(WE_VTC ~ Category + HC + WC_VTC + (1|Subject) + (0 + HC|Subject) + (0 + WC_VTC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model =  lmer(WE_VTC ~ Category + WC_VTC + (1|Subject) + (0 + HC|Subject) + (0 + WC_VTC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# event level ~ hipp - assoc hit
+full_model = lmer(WE_VTC ~ Category + HC + WC_VTC + (1|Subject) + (0 + HC|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Assoc_Hit==1), ],REML=F)
+summary(full_model)
+
+partial_model =  lmer(WE_VTC ~ Category + WC_VTC + (1|Subject) + (0 + HC|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Assoc_Hit==1), ],REML=F)
+
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+```
+
+
+```{r}
+# ang event level ~ hipp - all trials 
+full_model = lmer(WE_ANG ~ Category + HC + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model =  lmer(WE_ANG ~ Category + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+# event level ~ hipp - assoc hit trials
+full_model = lmer(WE_ANG ~  Category + HC + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit==1), ],REML=F)
+summary(full_model)
+
+partial_model =  lmer(WE_ANG ~ Category + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit==1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# relative contributions - assoc hit - adding VTC
+full_model = glmer(Assoc_Hit ~ Category + HC + Logit_VTC_y + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC_y |Subject), data=mvpa, family = binomial) 
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ Category + HC + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC_y |Subject), data=mvpa, family = binomial) 
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# relative contributions - adding ANG
+full_model = glmer(Assoc_Hit ~ Category + HC + Logit_ANG_y + (1|Subject) + (0 + HC |Subject) + (0 + Logit_ANG_y |Subject), data=mvpa, family = binomial) 
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ Category + HC + (1|Subject) + (0 + HC |Subject) + (0 + Logit_ANG_y |Subject), data=mvpa, family = binomial) 
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# adding both reinstatement metrics
+full_model = glmer(Assoc_Hit ~ Category + HC + Logit_VTC_y + Logit_ANG_y + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC_y |Subject) + (0 + Logit_ANG_y |Subject), data=mvpa, family = binomial) 
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ Category + HC + Logit_VTC_y + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC_y |Subject) + (0 + Logit_ANG_y |Subject), data=mvpa, family = binomial) 
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+
+```{r}
+# relative contributions - Ex_Sp_Hit -  adding VTC
+full_model = glmer(Ex_Sp_Hit ~ Category + HC + Logit_VTC + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC |Subject), data=amsp, family = binomial) 
+summary(full_model)
+
+partial_model = glmer(Ex_Sp_Hit ~ Category + HC + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC |Subject), data=amsp, family = binomial) 
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# adding ANG
+full_model = glmer(Ex_Sp_Hit ~ Category + HC + Logit_VTC + Logit_ANG + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC |Subject) + (0 + Logit_ANG |Subject), data=amsp, family = binomial) 
+summary(full_model)
+
+partial_model = glmer(Ex_Sp_Hit ~ Category + HC + Logit_VTC + (1|Subject) + (0 + HC |Subject) + (0 + Logit_VTC |Subject) + (0 + Logit_ANG |Subject), data=amsp, family = binomial) 
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+### moderation
+```{r}
+# moderation!
+
+# is relationship between neural metrics and retrieval success moderated by age? 
+
+# hipp 
+full_model = glmer(Assoc_Hit ~ HC*age_z + (1 | Subject) + (0 + HC | Subject), data=mvpa,family=binomial)
+summary(full_model)
+
+partial_model =  glmer(Assoc_Hit ~ HC + age_z + (1 | Subject) + (0 + HC | Subject), data=mvpa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# vtc 
+full_model = glmer(Assoc_Hit ~ Logit_VTC_y*age_z + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_y | Subject) + (0 + Logit_VTC_x | Subject), data=mvpa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ Logit_VTC_y + age_z + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_y | Subject) + (0 + Logit_VTC_x | Subject), data=mvpa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang 
+full_model = glmer(Assoc_Hit ~ Logit_ANG_y*age_z + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_y | Subject) + (0 + Logit_ANG_x | Subject), data=mvpa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ Logit_ANG_y + age_z + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_y | Subject) + (0 + Logit_ANG_x | Subject), data=mvpa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# is relationship between neural metrics and exemplar specific hit moderated by age? 
+
+# hipp 
+full_model = glmer(Ex_Sp_Hit ~ HC*age_z + (1 | Subject) + (0 + HC | Subject), data=mvpa,family=binomial)
+summary(full_model)
+
+partial_model =  glmer(Ex_Sp_Hit ~ HC + age_z + (1 | Subject) + (0 + HC | Subject), data=mvpa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# vtc 
+full_model = glmer(Ex_Sp_Hit ~ Logit_VTC_y*age_z + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_y | Subject) + (0 + Logit_VTC_x | Subject), data=mvpa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Ex_Sp_Hit ~ Logit_VTC_y + age_z + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_y | Subject) + (0 + Logit_VTC_x | Subject), data=mvpa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang 
+full_model = glmer(Ex_Sp_Hit ~ Logit_ANG_y*age_z + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_y | Subject) + (0 + Logit_ANG_x | Subject), data=mvpa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Ex_Sp_Hit ~ Logit_ANG_y + age_z + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_y | Subject) + (0 + Logit_ANG_x | Subject), data=mvpa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# is relationship between reinstatement and RT moderated by age?
+
+# vtc 
+full_model = lmer(RT ~ age_z*Logit_VTC_y + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_x | Subject) + (0 + Logit_VTC_y | Subject),data=mvpa_ah, REML=F)
+
+partial_model = lmer(RT ~ age_z + Logit_VTC_y + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_x | Subject) + (0 + Logit_VTC_y | Subject),data=mvpa_ah,REML=F)
+
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+# ang
+full_model = lmer(RT ~ age_z*Logit_ANG_y + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_x | Subject) + (0 + Logit_ANG_y | Subject),data=mvpa_ah,REML=F)
+
+partial_model =lmer(RT ~ age_z + Logit_ANG_y + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_x | Subject) + (0 + Logit_ANG_y | Subject),data=mvpa_ah,REML=F)
+
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+```{r}
+# is the relationship between event-level reinstatement and assoc hit moderated by age?
+
+# vtc
+full_model = glmer(Assoc_Hit ~ WE_VTC*age_z + WC_VTC + VTC + (1 | Subject) + (0 + WE_VTC | Subject), data=rsa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ WE_VTC + age_z + WC_VTC + VTC + (1 | Subject) + (0 + WE_VTC | Subject), data=rsa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang 
+full_model = glmer(Assoc_Hit ~ WE_ANG*age_z + WC_ANG + ANG + (1 | Subject) + (0 + WE_ANG | Subject), data=rsa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Assoc_Hit ~ WE_ANG + age_z + WC_ANG + ANG + (1 | Subject) + (0 + WE_ANG | Subject), data=rsa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+```{r}
+# is the relationship between event-level reinstatement and exemplar hit moderated by age?
+
+# vtc 
+full_model = glmer(Ex_Sp_Hit ~ WE_VTC*age_z + WC_VTC + VTC + (1 | Subject) + (0 + WE_VTC | Subject), data=rsa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Ex_Sp_Hit ~ WE_VTC + age_z + WC_VTC + VTC + (1 | Subject) + (0 + WE_VTC | Subject), data=rsa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang 
+full_model = glmer(Ex_Sp_Hit ~ WE_ANG*age_z + WC_ANG + ANG + (1 | Subject) + (0 + WE_ANG | Subject), data=rsa,family=binomial)
+summary(full_model)
+
+partial_model = glmer(Ex_Sp_Hit ~ WE_ANG + age_z + WC_ANG + ANG + (1 | Subject) + (0 + WE_ANG | Subject), data=rsa,family=binomial)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# is relationship between hippocampal activity and reinstatement moderated by age?
+
+# vtc 
+full_model = lmer(Logit_VTC_y ~ age_z*HC + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_x | Subject) + (0 + HC | Subject),data=mvpa, REML=F)
+
+partial_model = lmer(Logit_VTC_y ~ age_z + HC + Logit_VTC_x + (1 | Subject) + (0 + Logit_VTC_x | Subject) + (0 + HC | Subject),data=mvpa,REML=F)
+
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+# ang 
+full_model = lmer(Logit_ANG_y ~ age_z*HC + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_x | Subject) + (0 + HC | Subject),data=mvpa,REML=F)
+
+partial_model =lmer(Logit_ANG_y ~ age_z + HC + Logit_ANG_x + (1 | Subject) + (0 + Logit_ANG_x | Subject) + (0 + HC | Subject),data=mvpa,REML=F)
+
+summary(full_model)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+```{r}
+# event level ~ hipp  - moderated by age?
+full_model = lmer(WE_VTC ~ Category + HC*age_z + WC_VTC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model =  lmer(WE_VTC ~ Category + HC + age_z + WC_VTC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+full_model = lmer(WE_VTC ~ Category + HC*age_z + WC_VTC + (1|Subject) + (0 + HC|Subject) + (0 + WC_VTC|Subject), data=rsa_ah,REML=F)
+summary(full_model)
+
+partial_model =  lmer(WE_VTC ~ Category + HC + age_z + WC_VTC + (1|Subject) + (0 + HC|Subject) + (0 + WC_VTC|Subject), data=rsa_ah,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+### bootstrapping mediation
+```{r}
+## bootstrapping approach
+  bootDist_0_hipp<-NULL
+  bootDist_0_hippxage<-NULL
+  bootDist_1_vtc<-NULL
+  bootDist_1_vtcxage<-NULL
+  bootDist_1_hipp<-NULL
+  bootDist_1_hippxage<-NULL
+  bootDist_2_hipp<-NULL
+  bootDist_2_hippxage<-NULL
+  min_persub <- NULL
+  
+  for (i in 1:5000) {
+    print(i)
+    
+    # randomly sample from data, with replacement
+    o1<-mvpa[sample(1:dim(mvpa)[1],
+                    size=dim(mvpa)[1],
+                    replace=T),]
+    # make sure sampling roughly equally across subs
+    min_persub[i] = min(with(o1, table(Subject))) 
+    
+    beq.0<-glmer(Assoc_Hit ~ HC*age_z + Category + (1 | Subject) + 
+                   (0 + HC | Subject), data=o1,family=binomial)
+  
+    
+    bootDist_0_hipp[i]<-fixef(beq.0)[2] #overall effect of hipp
+    bootDist_0_hippxage[i]<-fixef(beq.0)[5] #overall effect of hipp*age
+    
+    beq.1<-glmer(Assoc_Hit ~ HC*age_z + Logit_VTC_y*age_z + Category 
+                 + (1 | Subject) + (0 + HC | Subject) 
+                 + (0 + Logit_VTC_y | Subject), data=o1,family=binomial)
+    
+    bootDist_1_vtc[i]<-fixef(beq.1)[4] #effect of vtc on memory (b)
+    bootDist_1_hipp[i]<-fixef(beq.1)[2] #direct effect of hipp on memory (c)
+    bootDist_1_hippxage[i]<-fixef(beq.1)[6] 
+    bootDist_1_vtcxage[i]<-fixef(beq.1)[7]  
+    
+    beq.2<-lmer(Logit_VTC_y ~ HC*age_z + Category + Assoc_Hit + (1 | Subject) 
+                 + (0 + HC | Subject), data=o1)
+    
+    bootDist_2_hipp[i]<-fixef(beq.2)[2] # effect of hipp on vtc (a)
+    bootDist_2_hippxage[i]<-fixef(beq.2)[6]
+    
+  }
+  
+  # Save out estimates
+  boot_est = 
+    data.frame(bootDist_0_hipp,
+               bootDist_0_hippxage,
+               bootDist_1_vtc,
+               bootDist_1_vtcxage,
+               bootDist_1_hipp,
+               bootDist_1_hippxage,
+               bootDist_2_hipp,
+               bootDist_2_hippxage,
+               min_persub)
+  
+  head(boot_est)
+  dim(boot_est) # 5000x9
+  write.csv(boot_est, './assochit_hippxvtc_bootest.csv')
+```
+
+```{r}
+## bootstrapping approach - repeat for ANG
+  bootDist_0_hipp<-NULL
+  bootDist_0_hippxage<-NULL
+  bootDist_1_ang<-NULL
+  bootDist_1_angxage<-NULL
+  bootDist_1_hipp<-NULL
+  bootDist_1_hippxage<-NULL
+  bootDist_2_hipp<-NULL
+  bootDist_2_hippxage<-NULL
+  min_persub <- NULL
+  
+  for (i in 1:5000) {
+    print(i)
+    
+    # randomly sample from data, with replacement
+    o1<-mvpa[sample(1:dim(mvpa)[1],
+                    size=dim(mvpa)[1],
+                    replace=T),]
+    # make sure sampling roughly equally across subs
+    min_persub[i] = min(with(o1, table(Subject))) 
+    
+    beq.0<-glmer(Assoc_Hit ~ HC*age_z + Category + (1 | Subject) + 
+                   (0 + HC | Subject), data=o1,family=binomial)
+  
+    
+    bootDist_0_hipp[i]<-fixef(beq.0)[2] #overall effect of hipp
+    bootDist_0_hippxage[i]<-fixef(beq.0)[5] #overall effect of hipp*age
+    
+    beq.1<-glmer(Assoc_Hit ~ HC*age_z + Logit_ANG_y*age_z + Category 
+                 + (1 | Subject) + (0 + HC | Subject) 
+                 + (0 + Logit_ANG_y | Subject), data=o1,family=binomial)
+    
+    bootDist_1_ang[i]<-fixef(beq.1)[4] #effect of ang on memory (b)
+    bootDist_1_hipp[i]<-fixef(beq.1)[2] #direct effect of hipp on memory (c)
+    bootDist_1_hippxage[i]<-fixef(beq.1)[6] 
+    bootDist_1_angxage[i]<-fixef(beq.1)[7]  
+    
+    beq.2<-lmer(Logit_ANG_y ~ HC*age_z + Category + Assoc_Hit + (1 | Subject) 
+                 + (0 + HC | Subject), data=o1)
+    
+    bootDist_2_hipp[i]<-fixef(beq.2)[2] # effect of hipp on ang (a)
+    bootDist_2_hippxage[i]<-fixef(beq.2)[6]
+    
+  }
+  
+  # Save out estimates
+  boot_est = 
+    data.frame(bootDist_0_hipp,
+               bootDist_0_hippxage,
+               bootDist_1_ang,
+               bootDist_1_angxage,
+               bootDist_1_hipp,
+               bootDist_1_hippxage,
+               bootDist_2_hipp,
+               bootDist_2_hippxage,
+               min_persub)
+  
+  head(boot_est)
+  dim(boot_est) # 5000x9
+  write.csv(boot_est, '~/Desktop/assochit_hippxang_bootest.csv')
+```
+
+
+```{r}
+# read in estimates
+boot_est = read.csv('./assochit_hippxang_bootest.csv')
+head(boot_est)
+dim(boot_est) # 5000x10
+```
+
+
+```{r}
+# overall effect
+mean(boot_est$bootDist_0_hipp)
+quantile(boot_est$bootDist_0_hipp, c(.025, 0.975))
+mean(boot_est$bootDist_0_hippxage)
+quantile(boot_est$bootDist_0_hippxage, c(.025, 0.975))
+```
+
+```{r}
+# direct effect
+mean(boot_est$bootDist_1_hipp)
+quantile(boot_est$bootDist_1_hipp, c(.025, 0.975))
+mean(boot_est$bootDist_1_hippxage)
+quantile(boot_est$bootDist_1_hippxage, c(.025, 0.975))
+```
+
+```{r}
+# a
+mean(boot_est$bootDist_2_hipp)
+quantile(boot_est$bootDist_2_hipp,c(.025, 0.975))
+mean(boot_est$bootDist_2_hippxage)
+quantile(boot_est$bootDist_2_hippxage,c(.025, 0.975))
+```
+
+```{r}
+# b
+mean(boot_est$bootDist_1_ang)
+quantile(boot_est$bootDist_1_ang, c(.025, 0.975))
+mean(boot_est$bootDist_1_angxage)
+quantile(boot_est$bootDist_1_angxage, c(.025, 0.975))
+```
+
+```{r}
+# mediation
+IE_hippVIAang = boot_est$bootDist_1_ang * boot_est$bootDist_2_hipp  #effect of ang on memory (b) * effect of hipp on ang (a)
+hist(IE_hippVIAang)
+mean(IE_hippVIAang)
+quantile(IE_hippVIAang,c(.025, 0.975))
+```
+
+
+## encoding vs retrieval
+
+```{r}
+# encoding predicts retrieval - vtc
+full_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + Sel_Uni_VTC + (1|Subject) + (0 + Logit_VTC_x|Subject), data=mvpa,REML= F)
+summary(full_model)
+
+partial_model =  lmer(Logit_VTC_y ~ Category + Sel_Uni_VTC + (1|Subject) + (0 + Logit_VTC_x|Subject), data=mvpa,REML= F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# encoding predicts retrieval - ang
+full_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + Sel_Uni_ANG + (1|Subject) + (0 + Logit_ANG_x|Subject), data=mvpa,REML= F)
+summary(full_model)
+
+partial_model = lmer(Logit_ANG_y ~ Category + Sel_Uni_ANG + (1|Subject) + (0 + Logit_ANG_x|Subject), data=mvpa,REML= F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+## supplementary analyses 
+
+### category effects
+```{r}
+
+mvpa_grouped <- aggregate(mvpa_ah[, c("Acc_ANG_y","Acc_VTC_y")], list(mvpa_ah$Subject, mvpa_ah$Category), mean)
+```
+
+```{r}
+mean(mvpa_grouped[(mvpa_grouped$Group.2=='WP'),'Acc_ANG_y'])
+mean(mvpa_grouped[(mvpa_grouped$Group.2=='WF'),'Acc_ANG_y'])
+```
+
+```{r}
+mean(mvpa_grouped[(mvpa_grouped$Group.2=='WP'),'Acc_VTC_y'])
+mean(mvpa_grouped[(mvpa_grouped$Group.2=='WF'),'Acc_VTC_y'])
+```
+
+```{r}
+t.test(mvpa_grouped[(mvpa_grouped$Group.2=='WP'),'Acc_ANG_y'],
+       mvpa_grouped[(mvpa_grouped$Group.2=='WF'),'Acc_ANG_y'],
+       paired=TRUE)
+```
+
+```{r}
+t.test(mvpa_grouped[(mvpa_grouped$Group.2=='WP'),'Acc_VTC_y'],
+       mvpa_grouped[(mvpa_grouped$Group.2=='WF'),'Acc_VTC_y'],
+       paired=TRUE)
+```
+
+```{r}
+mvpa_grouped2 <- aggregate(mvpa_ah[, c("Acc_ANG_y","Acc_VTC_y")], list(mvpa_ah$Subject), mean)
+
+mean(mvpa_grouped2$Acc_ANG_y)
+mean(mvpa_grouped2$Acc_VTC_y)
+```
+
+```{r}
+t.test(mvpa_grouped2$Acc_ANG_y, mvpa_grouped2$Acc_VTC_y, paired=TRUE)
+```
+
+
+```{r}
+# memory~logit ang x cat 
+full_model = glmer(Assoc_Hit ~ Category * Logit_ANG_y + Logit_ANG_x + Sel_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + Logit_ANG_y + Logit_ANG_x + Sel_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# memory~ logit vtc x cat 
+full_model = glmer(Assoc_Hit ~ Category * Logit_VTC_y + Logit_VTC_x + Sel_Uni_VTC + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + Logit_VTC_y + Logit_VTC_x + Sel_Uni_VTC + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# place mem ~ vtc
+full_model = glmer(Assoc_Hit ~  Logit_VTC_y + Logit_VTC_x + Place_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Category=='WP'),], family= binomial)
+
+partial_model = glmer(Assoc_Hit ~ Logit_VTC_x + Place_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Category=='WP'),], family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# face mem ~ vtc
+full_model = glmer(Assoc_Hit ~  Logit_VTC_y + Logit_VTC_x + Face_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Category=='WF'),], family= binomial)
+
+partial_model = glmer(Assoc_Hit ~ Logit_VTC_x + Face_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Category=='WF'),], family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# place mem ~ ang
+full_model = glmer(Assoc_Hit ~  Logit_ANG_y + Logit_ANG_x + Place_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Category=='WP'),], family= binomial)
+
+partial_model = glmer(Assoc_Hit ~ Logit_ANG_x + Place_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Category=='WP'),], family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# face mem ~ ang
+full_model = glmer(Assoc_Hit ~  Logit_ANG_y + Logit_ANG_x + Face_Uni_ANG + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Category=='WF'),], family= binomial)
+
+partial_model = glmer(Assoc_Hit ~ Logit_ANG_x + Face_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Category=='WF'),], family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# RT~logit ang x cat - ang
+full_model = lmer(RT ~ Category * Logit_ANG_y + Logit_ANG_x + Sel_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) ,], REML = F)
+
+partial_model = lmer(RT ~ Category + Logit_ANG_y + Logit_ANG_x + Sel_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) ,], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# RT~logit vtc x cat 
+full_model = lmer(RT ~ Category * Logit_VTC_y + Logit_VTC_x + Sel_Uni_VTC + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) ,], REML = F)
+
+partial_model = lmer(RT ~ Category + Logit_VTC_y + Logit_VTC_x + Sel_Uni_VTC + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) ,], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# RT~logit ang - face
+full_model = lmer(RT ~Logit_ANG_y + Logit_ANG_x + Face_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1)& (mvpa$Category=='WF') ,], REML = F)
+
+partial_model = lmer(RT ~ Logit_ANG_x + Face_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) & (mvpa$Category=='WF') ,], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# RT~logit vtc - face
+full_model = lmer(RT ~Logit_VTC_y + Logit_VTC_x + Face_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1)& (mvpa$Category=='WF') ,], REML = F)
+
+partial_model = lmer(RT ~ Logit_VTC_x + Face_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) & (mvpa$Category=='WF') ,], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# RT~logit ang - place
+full_model = lmer(RT ~Logit_ANG_y + Logit_ANG_x + Place_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1)& (mvpa$Category=='WP') ,], REML = F)
+
+partial_model = lmer(RT ~ Logit_ANG_x + Place_Uni_ANG + (1|Subject) + (0 + Logit_ANG_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) & (mvpa$Category=='WP') ,], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# RT~logit vtc - place
+full_model = lmer(RT ~Logit_VTC_y + Logit_VTC_x + Place_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1)& (mvpa$Category=='WP') ,], REML = F)
+
+partial_model = lmer(RT ~ Logit_VTC_x + Place_Uni_VTC + (1|Subject) + (0 + Logit_VTC_y|Subject), data=mvpa[(mvpa$Assoc_Hit==1) & (mvpa$Category=='WP') ,], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# Does memory~hippocampal activity effect vary by category?
+full_model = glmer(Assoc_Hit ~ Category*HC + (1|Subject) + (0 + HC|Subject), data=mvpa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+#summary(glmer(Assoc_Hit ~ Category*HC + (1 + HC|Subject), data=mvpa_z, family = binomial))
+```
+
+```{r}
+# RT ~ hipp  (correct trials) x category
+full_model = lmer(RT ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Assoc_Hit ==1), ], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# reinst ~ hipp  x category (all trials)
+full_model = lmer(Logit_VTC_y ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_VTC_y ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa, REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# reinst ~ hipp  x category (all trials)
+full_model = lmer(Logit_ANG_y ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=mvpa,REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_ANG_y ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa, REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# reinst ~ hipp  x category (correct only)
+full_model = lmer(Logit_VTC_y ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_VTC_y ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Assoc_Hit ==1), ], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# reinst ~ hipp  x category
+full_model = lmer(Logit_ANG_y ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_ANG_y ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Assoc_Hit ==1), ], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# reinst ~ hipp  = each category
+full_model = lmer(Logit_VTC_y ~ HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Category=='WF'),],REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_VTC_y ~  (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Category=='WF'),], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# reinst ~ hipp  = each category
+full_model = lmer(Logit_ANG_y ~ HC + (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Category=='WF'),],REML=F)
+summary(full_model)
+
+partial_model = lmer(Logit_ANG_y ~ (1|Subject) + (0 + HC|Subject), data=mvpa[(mvpa$Category=='WF'),], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# ers ~ hipp  x category (all trials)
+full_model = lmer(WE_VTC ~ Category * HC + WC_VTC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model = lmer(WE_VTC ~ Category + HC + WC_VTC + (1|Subject) + (0 + HC|Subject), data=rsa, REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ers ~ hipp  x category (all trials)
+full_model = lmer(WE_ANG ~ Category * HC + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model = lmer(WE_ANG ~ Category + HC + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa, REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# ers ~ hipp  by category
+full_model = lmer(WE_VTC ~  HC + WC_VTC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Category=='WF'),],REML=F)
+summary(full_model)
+
+partial_model = lmer(WE_VTC ~ WC_VTC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Category=='WF'),], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+```{r}
+# ers ~ hipp  by category
+full_model = lmer(WE_ANG ~  HC + WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Category=='WF'),],REML=F)
+summary(full_model)
+
+partial_model = lmer(WE_ANG ~ WC_ANG + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Category=='WF'),], REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+### category-level reinstatement effects via ERS
+```{r}
+# category-level reinstatement via ERS 
+# memory~reinstatement 
+full_model = glmer(Assoc_Hit ~ Category + VTC + WC_VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa, family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+full_model = glmer(Assoc_Hit ~ Category*WC_VTC + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category+WC_VTC + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa, family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# place mem ~ vtc
+full_model = glmer(Assoc_Hit ~  WC_VTC + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Category=='WP'),], family= binomial)
+
+partial_model = glmer(Assoc_Hit ~ VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Category=='WP'),], family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# face mem ~ vtc
+full_model = glmer(Assoc_Hit ~  WC_VTC + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Category=='WF'),], family= binomial)
+
+partial_model = glmer(Assoc_Hit ~ VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Category=='WF'),], family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# memory~reinstatement cat ERS - ang
+full_model = glmer(Assoc_Hit ~ Category + ANG + WC_ANG + (1|Subject) + (0 + WC_ANG|Subject), data=rsa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + ANG + (1|Subject) + (0 + WC_ANG|Subject), data=rsa, family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# memory~reinstatement cat ERS - ang x cat
+full_model = glmer(Assoc_Hit ~ Category*WC_ANG + ANG + (1|Subject) + (0 + WC_ANG|Subject), data=rsa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category+WC_ANG + ANG + (1|Subject) + (0 + WC_ANG|Subject), data=rsa, family= binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# RT ~ cat ers  (correct trials) 
+full_model = lmer(RT ~ Category + WC_VTC + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Category + VTC + (1|Subject) + (0 + WC_VTC|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# ang
+full_model = lmer(RT ~ Category + WC_ANG + ANG + (1|Subject) + (0 + WC_ANG|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(RT ~ Category + ANG + (1|Subject) + (0 + WC_ANG|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# cat ers ~ hipp (all trials) 
+full_model = lmer(WC_VTC ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_VTC ~ Category + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# cat ers ~ hipp (correct trials) 
+full_model = lmer(WC_VTC ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_VTC ~ Category + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+
+# cat ers ~ hipp (all trials) 
+full_model = lmer(WC_ANG ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_ANG ~ Category + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# cat ers ~ hipp (correct trials) 
+full_model = lmer(WC_ANG ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_ANG ~ Category + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit ==1), ],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+```
+
+```{r}
+# cat ers ~ hipp (all trials) x cat
+full_model = lmer(WC_VTC ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_VTC ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# cat ers ~ hipp (all trials) x cat
+full_model = lmer(WC_ANG ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_ANG ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa,REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# cat ers ~ hipp (all trials) x cat
+full_model = lmer(WC_VTC ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit==1),],REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_VTC ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit==1),],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# cat ers ~ hipp (all trials) x cat
+full_model = lmer(WC_ANG ~ Category * HC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit==1),],REML=F)
+summary(full_model)
+
+partial_model = lmer(WC_ANG ~ Category + HC + (1|Subject) + (0 + HC|Subject), data=rsa[(rsa$Assoc_Hit==1),],REML=F)
+
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# memory~ event ers ang x cat - ang
+full_model = glmer(Assoc_Hit ~ Category * WE_ANG + WC_ANG + ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + WE_ANG + WC_ANG + ANG + (1|Subject) + (0 + WE_ANG|Subject), data=rsa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# memory~ event ers vtc x cat 
+full_model = glmer(Assoc_Hit ~ Category * WE_VTC + WC_VTC + VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + WE_VTC + WC_VTC + VTC + (1|Subject) + (0 + WE_VTC|Subject), data=rsa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+### hippocampal subfield effects
+
+```{r}
+mvpa_subfields <- gather(mvpa, Subregion, Uni, CADG_ant:CADG_post, factor_key=TRUE)
+```
+
+
+```{r}
+mvpa_subfields <- mvpa_subfields %>%
+  mutate(Subregion = relevel(Subregion, ref = "CA3DG"))
+
+# diff across body subfields?
+full_model = glmer(Assoc_Hit ~ Category + Uni*Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion != 'CADG_ant')&(mvpa_subfields$Subregion != 'CADG_post') , ], family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + Uni + Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion != 'CADG_ant')&(mvpa_subfields$Subregion != 'CADG_post') , ], family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# true in each body subfield?
+full_model = glmer(Assoc_Hit ~ Category + Sub + (1|Subject) + (0 + Sub|Subject), data=mvpa, family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + (1|Subject) + (0 + Sub|Subject), data=mvpa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+mvpa_subfields <- mvpa_subfields %>%
+  mutate(Subregion = relevel(Subregion, ref = "CA3DG"))
+
+# diff across body subfields?
+full_model = lmer(Logit_VTC ~ Category + Uni*Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion != 'CADG_ant')&(mvpa_subfields$Subregion != 'CADG_post') , ], REML = F)
+
+partial_model = lmer(Logit_VTC ~ Category + Uni + Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion != 'CADG_ant')&(mvpa_subfields$Subregion != 'CADG_post') , ], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# diff across body subfields?
+full_model = lmer(Logit_ANG ~ Category + Uni*Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion == 'CA1')|(mvpa_subfields$Subregion == 'CA3DG') , ], REML = F)
+
+partial_model = lmer(Logit_ANG ~ Category + Uni + Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion == 'CA1')|(mvpa_subfields$Subregion == 'CA3DG') , ], REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# true in each body subfields?
+full_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + CA3DG + (1|Subject) + (0+CA3DG|Subject), data=mvpa, REML = F)
+
+partial_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + (1|Subject) + (0+CA3DG|Subject),data=mvpa, REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# true in each body subfields?
+full_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + CA3DG + (1|Subject) + (0+CA3DG|Subject), data=mvpa, REML = F)
+
+partial_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + (1|Subject) + (0+CA3DG|Subject),data=mvpa, REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# true in each body subfields?
+full_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + CA3DG + (1|Subject) + (0+CA3DG|Subject), data=mvpa_ah, REML = F)
+
+partial_model = lmer(Logit_VTC_y ~ Category + Logit_VTC_x + (1|Subject) + (0+CA3DG|Subject),data=mvpa_ah, REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+
+# true in each body subfields?
+full_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + CA3DG + (1|Subject) + (0+CA3DG|Subject), data=mvpa_ah, REML = F)
+
+partial_model = lmer(Logit_ANG_y ~ Category + Logit_ANG_x + (1|Subject) + (0+CA3DG|Subject),data=mvpa_ah, REML = F)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+```{r}
+# diff across head/tail?
+full_model = glmer(Assoc_Hit ~ Category + Uni*Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion == 'CADG_ant')|(mvpa_subfields$Subregion == 'CADG_post') , ], family = binomial)
+
+partial_model = glmer(Assoc_Hit ~ Category + Uni+Subregion + (1|Subject), data=mvpa_subfields[(mvpa_subfields$Subregion == 'CADG_ant')|(mvpa_subfields$Subregion == 'CADG_post') , ], family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+```{r}
+# true in head/tail?
+full_model = glmer(Assoc_Hit ~ Category + CADG_post + (1|Subject) + (0+CADG_post|Subject), data=mvpa, family = binomial)
+
+partial_model  = glmer(Assoc_Hit ~ Category + (1|Subject) + (0+CADG_post|Subject), data=mvpa, family = binomial)
+
+summary(full_model)
+ll_full = logLik(full_model)[1]*-2
+ll_partial = logLik(partial_model)[1]*-2
+ll_dif = ll_partial - ll_full
+
+print(ll_dif)
+print(pchisq(ll_dif, 1, lower.tail = FALSE))
+```
+
+
+
