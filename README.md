@@ -3,7 +3,7 @@ Data and analysis code for Trelle, Carr, Guerin, et al. (2020) eLife - 'Hippocam
 
 # Directory Overview 
 
-* Main code and stimuli to run behavioural task: am_task/am.m and assorted files in scripts
+* Main code and stimuli to run behavioural task: am_task
 * Behavioural data preprocessing and analysis: beh_analysis
 * fMRI data preprocessing and analysis: fmri_analysis
 * Behavioural and fMRI data: data
